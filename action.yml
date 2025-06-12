@@ -1,4 +1,4 @@
-name: "Snowflake Run SQL Action"
+name: "Snowflake.RunSQLAction"
 description: "Execute a single SQL statement against Snowflake"
 author: "Marcelino Jackson"
 branding:
