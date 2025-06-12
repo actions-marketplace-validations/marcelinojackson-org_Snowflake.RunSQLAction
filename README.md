@@ -1,6 +1,6 @@
 # Snowflake.RunSQLAction
 
-A minimal GitHub Action that runs a single SQL statement against Snowflake using the shared `@marcelinojackson-org/snowflake-common` helper.
+A minimal GitHub Action that runs a single SQL statement against Snowflake and returns JSON.
 
 ## Usage
 
@@ -20,10 +20,3 @@ A minimal GitHub Action that runs a single SQL statement against Snowflake using
 
 You can also set `RUN_SQL_STATEMENT` in the environment instead of passing an input.
 
-## Local development
-
-```bash
-npm install
-npm run build
-RUN_SQL_STATEMENT='select current_version()' node dist/snowflake-runsql.js
-```
