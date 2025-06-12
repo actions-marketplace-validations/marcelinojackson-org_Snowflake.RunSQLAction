@@ -8,8 +8,7 @@ A minimal GitHub Action that runs a single SQL statement against Snowflake and r
 - uses: marcelinojackson-org/Snowflake.RunSQLAction@v1
   with:
     sql: 'select current_user() as current_user'
-    max-rows: 100
-    debug: MINIMAL
+    return-rows: 100
   env:
     SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
     SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
@@ -20,4 +19,4 @@ A minimal GitHub Action that runs a single SQL statement against Snowflake and r
     SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 ```
 
-You can also set `RUN_SQL_STATEMENT`, `RUN_SQL_MAX_ROWS`, or `RUN_SQL_DEBUG` via environment variables instead of inputs. `max-rows` defaults to 100 (capped at 1000). Set `debug: VERBOSE` to echo extra logs and enable verbose Snowflake client logging.
+You can also set `RUN_SQL_STATEMENT` or `RUN_SQL_RETURN_ROWS` via environment variables instead of inputs. `return-rows` defaults to 100 (capped at 1000). Use `SNOWFLAKE_LOG_LEVEL=VERBOSE` if you need extra logging.

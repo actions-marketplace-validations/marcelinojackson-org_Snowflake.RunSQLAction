@@ -1,9 +1,10 @@
 import * as core from '@actions/core';
 import { runSql, SnowflakeConnectionConfig } from '@marcelinojackson-org/snowflake-common';
 
-type DebugLevel = 'MINIMAL' | 'VERBOSE';
+type LogLevel = 'MINIMAL' | 'VERBOSE';
 
-function gatherConfig(debugLevel: DebugLevel): SnowflakeConnectionConfig {
+function gatherConfig(): SnowflakeConnectionConfig {
+  const logLevel = normalizeLogLevel(process.env.SNOWFLAKE_LOG_LEVEL);
   return {
     account: process.env.SNOWFLAKE_ACCOUNT || process.env.SNOWFLAKE_ACCOUNT_URL,
     username: process.env.SNOWFLAKE_USER,
@@ -13,11 +14,11 @@ function gatherConfig(debugLevel: DebugLevel): SnowflakeConnectionConfig {
     warehouse: process.env.SNOWFLAKE_WAREHOUSE,
     database: process.env.SNOWFLAKE_DATABASE,
     schema: process.env.SNOWFLAKE_SCHEMA,
-    logLevel: debugLevel
+    logLevel
   };
 }
 
-function normalizeDebug(value?: string): DebugLevel {
+function normalizeLogLevel(value?: string): LogLevel {
   const upper = (value ?? 'MINIMAL').toUpperCase();
   return upper === 'VERBOSE' ? 'VERBOSE' : 'MINIMAL';
 }
@@ -36,13 +37,13 @@ async function main(): Promise<void> {
     const envSql = process.env.RUN_SQL_STATEMENT;
     const sqlText = (inputSql || envSql || 'select current_user() as current_user').trim();
 
-    const debugLevel = normalizeDebug(core.getInput('debug') || process.env.RUN_SQL_DEBUG);
-    const maxRows = clampRows(core.getInput('max-rows') || process.env.RUN_SQL_MAX_ROWS);
-    const config = gatherConfig(debugLevel);
+    const maxRows = clampRows(core.getInput('return-rows') || process.env.RUN_SQL_RETURN_ROWS);
+    const config = gatherConfig();
+    const verbose = config.logLevel === 'VERBOSE';
 
-    if (debugLevel === 'VERBOSE') {
-      console.log(`[VERBOSE] Executing SQL: ${sqlText}`);
-      console.log(`[VERBOSE] Max rows: ${maxRows}`);
+    if (verbose) {
+      console.log(`[VERBOSE] SQL: ${sqlText}`);
+      console.log(`[VERBOSE] Return rows: ${maxRows}`);
     }
 
     const result = await runSql(sqlText, config);
