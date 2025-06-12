@@ -1,0 +1,13 @@
+name: "Snowflake Run SQL Action"
+description: "Execute a single SQL statement against Snowflake"
+author: "Marcelino Jackson"
+branding:
+  icon: "database"
+  color: "blue"
+inputs:
+  sql:
+    description: "Optional SQL text. Defaults to RUN_SQL_STATEMENT env or select current_user()."
+    required: false
+runs:
+  using: "node20"
+  main: "dist/snowflake-runsql.js"

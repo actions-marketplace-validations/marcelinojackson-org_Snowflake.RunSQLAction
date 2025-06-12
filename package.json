@@ -1,0 +1,30 @@
+{
+  "name": "snowflake-runsql-action",
+  "version": "1.0.0",
+  "description": "GitHub Action that executes arbitrary SQL against Snowflake using the shared common library",
+  "main": "dist/snowflake-runsql.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "test": "echo \"No tests yet - add integration tests with act or Jest\" && exit 0"
+  },
+  "keywords": [
+    "snowflake",
+    "github-actions",
+    "sql"
+  ],
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "action.yml",
+    "README.md"
+  ],
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@marcelinojackson-org/snowflake-common": "github:marcelinojackson-org/Snowflake.Common"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
