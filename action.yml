@@ -8,6 +8,14 @@ inputs:
   sql:
     description: "Optional SQL text. Defaults to RUN_SQL_STATEMENT env or select current_user()."
     required: false
+  max-rows:
+    description: "Maximum rows to print from the result (default 100, max 1000)."
+    required: false
+    default: "100"
+  debug:
+    description: "MINIMAL (default) or VERBOSE to log additional details."
+    required: false
+    default: "MINIMAL"
 runs:
   using: "node20"
   main: "dist/snowflake-runsql.js"
