@@ -13,7 +13,7 @@ A minimal GitHub Action that runs a single SQL statement against Snowflake and r
 | `RUN_SQL_RESULT_DIR` | Optional | Directory where persisted files will be written. Defaults to `RUNNER_TEMP` (or `snowflake-results/` for local runs). |
 | `SNOWFLAKE_*` env vars | **Required** | Provide your account credentials (account URL, user, password/private key, role, warehouse, database, schema). Set `SNOWFLAKE_LOG_LEVEL=VERBOSE` to see the full JSON payload in the logs even when persistence is enabled. |
 
-> **Note:** The action always requires Snowflake credentials via environment variables. Use repository or organization secrets for sensitive values (`SNOWFLAKE_PASSWORD`, `SNOWFLAKE_PRIVATE_KEY_PATH`, etc.).
+> **Note:** The action always requires Snowflake credentials via environment variables. Use repository or organization secrets for sensitive values (`SNOWFLAKE_PASSWORD`, `SNOWFLAKE_PAT, etc.).
 
 ## Basic usage
 
