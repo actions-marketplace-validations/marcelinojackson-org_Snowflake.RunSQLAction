@@ -154,7 +154,13 @@ async function main(): Promise<void> {
         console.warn('Failed to persist result file:', persistErr);
       }
     } else {
-      console.log(JSON.stringify(output, null, 2));
+      const csvOutput = buildCsvPayload(trimmedRows);
+      if (csvOutput) {
+        console.log('Rows (CSV):');
+        console.log(csvOutput);
+      } else {
+        console.log('Rows (CSV): [no rows returned]');
+      }
     }
 
     core.setOutput('result-file', persistedCsv);
@@ -265,9 +271,13 @@ function sanitizeForFilename(value: string): string {
 }
 
 async function writeRowsToCsv(rows: Array<Record<string, unknown>>, destination: string): Promise<void> {
+  const payload = buildCsvPayload(rows);
+  await fs.writeFile(destination, payload, 'utf8');
+}
+
+function buildCsvPayload(rows: Array<Record<string, unknown>>): string {
   if (rows.length === 0) {
-    await fs.writeFile(destination, '', 'utf8');
-    return;
+    return '';
   }
 
   const columns: string[] = [];
@@ -289,7 +299,7 @@ async function writeRowsToCsv(rows: Array<Record<string, unknown>>, destination:
     lines.push(values.join(','));
   }
 
-  await fs.writeFile(destination, `${lines.join('\n')}\n`, 'utf8');
+  return `${lines.join('\n')}\n`;
 }
 
 function csvEscape(value: unknown): string {

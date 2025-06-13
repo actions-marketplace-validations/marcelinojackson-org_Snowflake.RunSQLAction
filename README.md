@@ -74,7 +74,7 @@ You can omit the `sql` input only if you provide `RUN_SQL_STATEMENT`. `sql`/`RUN
 
 Set `persist-results: true` (or `RUN_SQL_PERSIST_RESULTS=true`) to write the full row set to disk as CSV (UTF‑8). The runner appends the last token of the Snowflake query id to the base filename (e.g., `snowflake-result-<idSuffix>.csv`) and also emits a companion `<name>-<idSuffix>.meta.json` describing the SQL and row count. Control the base name via `result-filename` (or `RUN_SQL_RESULT_FILENAME`), defaulting to `snowflake-result.csv`. Files are written under `RUN_SQL_RESULT_DIR` (or a `snowflake-results` subfolder inside `RUNNER_TEMP`); that directory is recreated on each run so artifacts never pile up.
 
-When persistence is enabled the action prints only a compact summary to the logs (query id, row count, limit info). If you need the full CSV payload in the log, leave persistence disabled.
+When persistence is enabled the action prints only a compact summary to the logs (query id, row count, limit info). If you leave `persist-results` disabled, the action still prints the rows directly to the logs **as CSV**, so you can copy/paste or download the raw results without creating an artifact.
 
 ```yaml
 - name: Run Snowflake SQL
