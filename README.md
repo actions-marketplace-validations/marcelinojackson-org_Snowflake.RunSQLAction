@@ -1,6 +1,6 @@
 # Snowflake.RunSQLAction
 
-A GitHub Action that runs a single SQL statement against Snowflake and returns JSON. 
+A GitHub Action that runs a single SQL statement against Snowflake and returns CSV or can upload the results as an artifact.
 
 ## Inputs & Environment
 
