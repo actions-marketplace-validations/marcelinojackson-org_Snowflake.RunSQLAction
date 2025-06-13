@@ -1,9 +1,10 @@
 import * as core from '@actions/core';
-import { runSql, SnowflakeConnectionConfig } from '@marcelinojackson-org/snowflake-common';
+import { runSql, SnowflakeConnectionConfig, SnowflakeQueryResult } from '@marcelinojackson-org/snowflake-common';
 
 type LogLevel = 'MINIMAL' | 'VERBOSE';
 
 const LIMITABLE_PREFIXES = new Set(['SELECT', 'WITH', 'SHOW', 'DESC', 'DESCRIBE']);
+const PREVIEW_ROW_LIMIT = 5;
 
 function gatherConfig(): SnowflakeConnectionConfig {
   const logLevel = normalizeLogLevel(process.env.SNOWFLAKE_LOG_LEVEL);
@@ -37,6 +38,18 @@ interface LimitPlan {
   sql: string;
   applied: boolean;
   reason?: string;
+}
+
+interface QuerySummary {
+  executedSql: string;
+  requestedSql: string;
+  queryId: string;
+  requestedRows: number;
+  rowsReturned: number;
+  limitAppliedInSql: boolean;
+  limitReason?: string;
+  columns: string[];
+  previewRows: Array<Record<string, unknown>>;
 }
 
 function enforceSqlLimit(sqlText: string, maxRows: number): LimitPlan {
@@ -109,7 +122,7 @@ async function main(): Promise<void> {
     const trimmedRows = result.rows.slice(0, maxRows);
     const trimmed = result.rows.length > maxRows;
 
-    const output = {
+    const output: ActionResult = {
       ...result,
       requestedSql: sqlText,
       executedSql: limitPlan.sql,
@@ -123,8 +136,20 @@ async function main(): Promise<void> {
       notice: trimmed ? `Result truncated to ${maxRows} rows.` : undefined
     };
 
+    const summary = buildSummary(output, maxRows);
+
     console.log('Snowflake query succeeded ✅');
-    console.log(JSON.stringify(output, null, 2));
+    console.log('Summary:', JSON.stringify(summary, null, 2));
+    if (summary.previewRows.length > 0) {
+      console.log('Row preview:', JSON.stringify(summary.previewRows, null, 2));
+    }
+    if (verbose) {
+      console.log('Full result payload (verbose mode):');
+      console.log(JSON.stringify(output, null, 2));
+    }
+
+    core.setOutput('summary-json', JSON.stringify(summary));
+    core.setOutput('result-json', JSON.stringify(output));
   } catch (error) {
     console.error('Snowflake query failed:');
     if (error instanceof Error) {
@@ -138,3 +163,33 @@ async function main(): Promise<void> {
 }
 
 void main();
+
+type ActionResult = SnowflakeQueryResult & {
+  requestedSql: string;
+  executedSql: string;
+  limit: {
+    requestedRows: number;
+    enforcedInSql: boolean;
+    reason?: string;
+  };
+  notice?: string;
+};
+
+function buildSummary(result: ActionResult, requestedRows: number): QuerySummary {
+  const columns = new Set<string>();
+  result.rows.forEach((row: Record<string, unknown>) => {
+    Object.keys(row).forEach((key) => columns.add(key));
+  });
+
+  return {
+    executedSql: result.executedSql,
+    requestedSql: result.requestedSql,
+    queryId: result.queryId,
+    requestedRows,
+    rowsReturned: result.rows.length,
+    limitAppliedInSql: result.limit.enforcedInSql,
+    limitReason: result.limit.reason,
+    columns: Array.from(columns.values()),
+    previewRows: result.rows.slice(0, PREVIEW_ROW_LIMIT)
+  };
+}
