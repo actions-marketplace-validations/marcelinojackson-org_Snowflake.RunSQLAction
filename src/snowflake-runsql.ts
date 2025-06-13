@@ -1,4 +1,6 @@
 import * as core from '@actions/core';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { runSql, SnowflakeConnectionConfig } from '@marcelinojackson-org/snowflake-common';
 
 type LogLevel = 'MINIMAL' | 'VERBOSE';
@@ -30,13 +32,24 @@ function clampRows(value?: string): number {
   if (Number.isNaN(raw) || raw <= 0) {
     return 100;
   }
-  return Math.min(1000, raw);
+  return Math.min(10000, raw);
 }
 
 interface LimitPlan {
   sql: string;
   applied: boolean;
   reason?: string;
+}
+
+interface PersistenceOptions {
+  enabled: boolean;
+  filename: string;
+  directory?: string;
+}
+
+interface PersistedFiles {
+  csvPath: string;
+  metadataPath: string;
 }
 
 function enforceSqlLimit(sqlText: string, maxRows: number): LimitPlan {
@@ -91,12 +104,13 @@ async function main(): Promise<void> {
   try {
     const inputSql = core.getInput('sql', { required: false });
     const envSql = process.env.RUN_SQL_STATEMENT;
-    const sqlText = (inputSql || envSql || 'select current_user() as current_user').trim();
+    const sqlText = selectSqlText(inputSql, envSql);
 
     const maxRows = clampRows(core.getInput('return-rows') || process.env.RUN_SQL_RETURN_ROWS);
     const config = gatherConfig();
     const verbose = config.logLevel === 'VERBOSE';
     const limitPlan = enforceSqlLimit(sqlText, maxRows);
+    const persistence = resolvePersistenceOptions();
 
     if (verbose) {
       console.log(`[VERBOSE] SQL: ${sqlText}`);
@@ -123,8 +137,28 @@ async function main(): Promise<void> {
       notice: trimmed ? `Result truncated to ${maxRows} rows.` : undefined
     };
 
+    const summary = buildSummary(output);
     console.log('Snowflake query succeeded ✅');
-    console.log(JSON.stringify(output, null, 2));
+    console.log('Summary:', JSON.stringify(summary, null, 2));
+
+    let persistedCsv = '';
+    let persistedMeta = '';
+    if (persistence.enabled) {
+      try {
+        const files = await persistResults(output, trimmedRows, persistence);
+        persistedCsv = files.csvPath;
+        persistedMeta = files.metadataPath;
+        console.log(`Full row set written to ${persistedCsv}`);
+        console.log(`Result metadata written to ${persistedMeta}`);
+      } catch (persistErr) {
+        console.warn('Failed to persist result file:', persistErr);
+      }
+    } else {
+      console.log(JSON.stringify(output, null, 2));
+    }
+
+    core.setOutput('result-file', persistedCsv);
+    core.setOutput('result-metadata-file', persistedMeta);
   } catch (error) {
     console.error('Snowflake query failed:');
     if (error instanceof Error) {
@@ -138,3 +172,157 @@ async function main(): Promise<void> {
 }
 
 void main();
+
+function selectSqlText(inputSql?: string, envSql?: string): string {
+  const trimmedInput = inputSql?.trim();
+  const trimmedEnv = envSql?.trim();
+  const candidate = trimmedInput && trimmedInput.length > 0 ? trimmedInput : trimmedEnv;
+  if (!candidate) {
+    throw new Error('SQL input missing. Provide the `sql` input or set RUN_SQL_STATEMENT.');
+  }
+  return candidate;
+}
+
+function resolvePersistenceOptions(): PersistenceOptions {
+  const inputValue = core.getInput('persist-results');
+  const envValue = process.env.RUN_SQL_PERSIST_RESULTS;
+  const enabled = parseBoolean(inputValue) ?? parseBoolean(envValue) ?? false;
+
+  const filenameInput = core.getInput('result-filename') || process.env.RUN_SQL_RESULT_FILENAME || 'snowflake-result.csv';
+  const filename = filenameInput.trim() || 'snowflake-result.csv';
+
+  const directory = process.env.RUN_SQL_RESULT_DIR;
+
+  return { enabled, filename, directory };
+}
+
+function parseBoolean(value?: string): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
+  return undefined;
+}
+
+async function persistResults(
+  result: {
+    queryId: string;
+    requestedSql: string;
+    executedSql: string;
+  },
+  rows: Array<Record<string, unknown>>,
+  options: PersistenceOptions
+): Promise<PersistedFiles> {
+  const baseDir =
+    options.directory || process.env.RUN_SQL_RESULT_DIR || process.env.RUNNER_TEMP || path.join(process.cwd(), 'snowflake-results');
+  const paths = buildPersistedPaths(result.queryId, options.filename, baseDir);
+
+  await fs.rm(baseDir, { recursive: true, force: true }).catch(() => undefined);
+  await fs.mkdir(baseDir, { recursive: true });
+
+  await writeRowsToCsv(rows, paths.csvPath);
+
+  const metadata = {
+    queryId: result.queryId,
+    requestedSql: result.requestedSql,
+    executedSql: result.executedSql,
+    rowCount: rows.length,
+    generatedAt: new Date().toISOString()
+  };
+  await fs.writeFile(paths.metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
+
+  return paths;
+}
+
+function buildPersistedPaths(queryId: string, filename: string, baseDir: string): PersistedFiles {
+  const parsed = path.parse(filename);
+  const baseName = parsed.name || 'snowflake-result';
+  const ext = parsed.ext || '.csv';
+  const idToken = (queryId || 'result').split('-').pop() || 'result';
+  const safeId = sanitizeForFilename(idToken);
+
+  const csvName = `${baseName}-${safeId}${ext}`;
+  const metadataName = `${baseName}-${safeId}.meta.json`;
+
+  return {
+    csvPath: path.join(baseDir, csvName),
+    metadataPath: path.join(baseDir, metadataName)
+  };
+}
+
+function sanitizeForFilename(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]/g, '-');
+}
+
+async function writeRowsToCsv(rows: Array<Record<string, unknown>>, destination: string): Promise<void> {
+  if (rows.length === 0) {
+    await fs.writeFile(destination, '', 'utf8');
+    return;
+  }
+
+  const columns: string[] = [];
+  const seen = new Set<string>();
+  rows.forEach((row) => {
+    Object.keys(row).forEach((key) => {
+      if (!seen.has(key)) {
+        seen.add(key);
+        columns.push(key);
+      }
+    });
+  });
+
+  const lines: string[] = [];
+  lines.push(columns.map((col) => csvEscape(col)).join(','));
+
+  for (const row of rows) {
+    const values = columns.map((col) => csvEscape(row[col]));
+    lines.push(values.join(','));
+  }
+
+  await fs.writeFile(destination, `${lines.join('\n')}\n`, 'utf8');
+}
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  let str: string;
+  if (value instanceof Date) {
+    str = value.toISOString();
+  } else if (typeof value === 'object') {
+    str = JSON.stringify(value);
+  } else {
+    str = String(value);
+  }
+
+  if (/[",\n\r]/.test(str)) {
+    str = `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function buildSummary(output: {
+  queryId: string;
+  requestedSql: string;
+  executedSql: string;
+  rowCount: number;
+  limit: { requestedRows: number; enforcedInSql: boolean; reason?: string };
+  notice?: string;
+}) {
+  return {
+    queryId: output.queryId,
+    requestedSql: output.requestedSql,
+    executedSql: output.executedSql,
+    rowCount: output.rowCount,
+    limit: output.limit,
+    notice: output.notice
+  };
+}

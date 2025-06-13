@@ -6,12 +6,25 @@ branding:
   color: "blue"
 inputs:
   sql:
-    description: "Optional SQL text. Defaults to RUN_SQL_STATEMENT env or select current_user()."
-    required: false
+    description: "SQL text to execute. You must provide this input or set RUN_SQL_STATEMENT."
+    required: true
   return-rows:
-    description: "Maximum rows to print from the result (default 100, max 1000)."
+    description: "Maximum rows to print from the result (default 100, max 10000)."
     required: false
     default: "100"
+  persist-results:
+    description: "Set to true to write the full result rows to disk as CSV for artifact upload."
+    required: false
+    default: "false"
+  result-filename:
+    description: "Base filename (with extension) used for persisted files; query id is appended automatically."
+    required: false
+    default: "snowflake-result.csv"
+outputs:
+  result-file:
+    description: "Absolute path to the persisted CSV file (empty when persistence disabled)."
+  result-metadata-file:
+    description: "Absolute path to the metadata JSON describing the persisted result (empty when persistence disabled)."
 runs:
   using: "node20"
   main: "dist/snowflake-runsql.js"
