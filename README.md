@@ -19,4 +19,4 @@ A minimal GitHub Action that runs a single SQL statement against Snowflake and r
     SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 ```
 
-You can also set `RUN_SQL_STATEMENT` or `RUN_SQL_RETURN_ROWS` via environment variables instead of inputs. `return-rows` defaults to 100 (capped at 1000). Use `SNOWFLAKE_LOG_LEVEL=VERBOSE` if you need extra logging.
+You can also set `RUN_SQL_STATEMENT` or `RUN_SQL_RETURN_ROWS` via environment variables instead of inputs. `return-rows` defaults to 100 (capped at 1000) and the action tries to append a `LIMIT <n>` clause for `SELECT/WITH/SHOW/DESC` statements so fewer rows ever leave Snowflake (other statement types fall back to client-side truncation). Use `SNOWFLAKE_LOG_LEVEL=VERBOSE` if you need extra logging.
