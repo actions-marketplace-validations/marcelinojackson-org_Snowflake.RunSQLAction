@@ -220,12 +220,15 @@ async function persistResults(
   rows: Array<Record<string, unknown>>,
   options: PersistenceOptions
 ): Promise<PersistedFiles> {
-  const baseDir =
-    options.directory || process.env.RUN_SQL_RESULT_DIR || process.env.RUNNER_TEMP || path.join(process.cwd(), 'snowflake-results');
-  const paths = buildPersistedPaths(result.queryId, options.filename, baseDir);
+  const rootDir =
+    options.directory ||
+    process.env.RUN_SQL_RESULT_DIR ||
+    path.join(process.env.RUNNER_TEMP || path.join(process.cwd(), 'snowflake-results'), 'snowflake-results');
+  const resolvedDir = path.isAbsolute(rootDir) ? rootDir : path.join(process.cwd(), rootDir);
+  const paths = buildPersistedPaths(result.queryId, options.filename, resolvedDir);
 
-  await fs.rm(baseDir, { recursive: true, force: true }).catch(() => undefined);
-  await fs.mkdir(baseDir, { recursive: true });
+  await fs.rm(resolvedDir, { recursive: true, force: true }).catch(() => undefined);
+  await fs.mkdir(resolvedDir, { recursive: true });
 
   await writeRowsToCsv(rows, paths.csvPath);
 

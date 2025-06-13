@@ -70,7 +70,7 @@ You can omit the `sql` input only if you provide `RUN_SQL_STATEMENT`. `sql`/`RUN
 
 ## Persisting large result sets
 
-Set `persist-results: true` (or `RUN_SQL_PERSIST_RESULTS=true`) to write the full row set to disk as CSV (UTF‑8). The runner appends the last token of the Snowflake query id to the base filename (e.g., `snowflake-result-<idSuffix>.csv`) and also emits a companion `<name>-<idSuffix>.meta.json` describing the SQL and row count. Control the base name via `result-filename` (or `RUN_SQL_RESULT_FILENAME`), defaulting to `snowflake-result.csv`. Relative paths resolve under `RUNNER_TEMP` by default, but you can override the directory with `RUN_SQL_RESULT_DIR` (the directory is recreated on each run, so it never accumulates old artifacts).
+Set `persist-results: true` (or `RUN_SQL_PERSIST_RESULTS=true`) to write the full row set to disk as CSV (UTF‑8). The runner appends the last token of the Snowflake query id to the base filename (e.g., `snowflake-result-<idSuffix>.csv`) and also emits a companion `<name>-<idSuffix>.meta.json` describing the SQL and row count. Control the base name via `result-filename` (or `RUN_SQL_RESULT_FILENAME`), defaulting to `snowflake-result.csv`. Files are written under `RUN_SQL_RESULT_DIR` (or a `snowflake-results` subfolder inside `RUNNER_TEMP`); that directory is recreated on each run so artifacts never pile up.
 
 When persistence is enabled the action prints only a compact summary to the logs (query id, row count, limit info). If you need the full JSON payload in the log, leave persistence disabled.
 
