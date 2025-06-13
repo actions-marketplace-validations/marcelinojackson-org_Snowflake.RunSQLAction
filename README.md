@@ -1,19 +1,21 @@
 # Snowflake.RunSQLAction
 
-A minimal GitHub Action that runs a single SQL statement against Snowflake and returns JSON.
+A GitHub Action that runs a single SQL statement against Snowflake and returns JSON. 
 
-## Inputs & environment
+## Inputs & Environment
 
 | Input / Env | Required? | Description |
 |-------------|-----------|-------------|
 | `sql` / `RUN_SQL_STATEMENT` | **Required** | SQL text to execute. You must supply the input or set the env variable—there is no default query. |
-| `return-rows` / `RUN_SQL_RETURN_ROWS` | Optional (`100`, max `10000`) | Maximum number of rows to *print*. The action attempts to append `LIMIT <n>` to SELECT/WITH/SHOW/DESC statements so fewer rows leave Snowflake. |
+| `return-rows` / `RUN_SQL_RETURN_ROWS` | Defaulted (`100`, max `10000`) | Maximum number of rows to *print*. The action attempts to append `LIMIT <n>` to SELECT/WITH/SHOW/DESC statements so fewer rows leave Snowflake. |
 | `persist-results` / `RUN_SQL_PERSIST_RESULTS` | Optional (`false`) | When `true`, skips printing every row and instead writes two files (CSV + metadata JSON) for artifact upload. |
 | `result-filename` / `RUN_SQL_RESULT_FILENAME` | Optional (`snowflake-result.csv`) | Base filename used when persisting results. The action appends the Snowflake query id suffix and keeps the `.csv` extension unless you specify a different one. |
 | `RUN_SQL_RESULT_DIR` | Optional | Directory where persisted files will be written. Defaults to `RUNNER_TEMP` (or `snowflake-results/` for local runs). |
 | `SNOWFLAKE_*` env vars | **Required** | Provide your account credentials (account URL, user, password/private key, role, warehouse, database, schema). Set `SNOWFLAKE_LOG_LEVEL=VERBOSE` to see the full JSON payload in the logs even when persistence is enabled. |
 
-> **Note:** The action always requires Snowflake credentials via environment variables. Use repository or organization secrets for sensitive values (`SNOWFLAKE_PASSWORD`, `SNOWFLAKE_PAT, etc.).
+> **Note:**
+> - The action requires Snowflake credentials via environment variables or set in the action. Use repository or organization secrets for sensitive values (`SNOWFLAKE_PASSWORD`, `SNOWFLAKE_PAT, etc.).
+> - With the connection parameters provided, such as the user's role, warehouse, database and schema, are automatically used to establish the initial session context for that session.
 
 ## Basic usage
 
@@ -24,10 +26,10 @@ A minimal GitHub Action that runs a single SQL statement against Snowflake and r
     sql: "select current_user() as current_user"
     return-rows: 25
   env:
-    SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-    SNOWFLAKE_ACCOUNT_URL: ${{ secrets.SNOWFLAKE_ACCOUNT_URL }}
+    SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }} # Optional
+    SNOWFLAKE_ACCOUNT_URL: ${{ secrets.SNOWFLAKE_ACCOUNT_URL }} 
     SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-    SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+    SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }} # OR  ${{ secrets.SNOWFLAKE_PAT }}
     SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
     SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
     SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
@@ -49,10 +51,10 @@ You can omit the `sql` input only if you provide `RUN_SQL_STATEMENT`. `sql`/`RUN
     result-filename: nightly-report.csv
   env:
     RUN_SQL_RESULT_DIR: ${{ runner.temp }}/snowflake-artifacts
-    SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+    SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}  # Optional
     SNOWFLAKE_ACCOUNT_URL: ${{ secrets.SNOWFLAKE_ACCOUNT_URL }}
     SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-    SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+    SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}  # OR  ${{ secrets.SNOWFLAKE_PAT }}
     SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
     SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
     SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
