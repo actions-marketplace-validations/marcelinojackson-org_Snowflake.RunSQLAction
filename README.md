@@ -38,6 +38,12 @@ A GitHub Action that runs a single SQL statement against Snowflake and returns C
 
 You can omit the `sql` input only if you provide `RUN_SQL_STATEMENT`. `sql`/`RUN_SQL_STATEMENT` is mandatory—if both are empty, the action fails. Any query type is supported; the action will still execute even if it cannot append a `LIMIT` clause, but large result sets will be truncated client-side to respect `return-rows`.
 
+## Sequence
+
+```mermaid
+%%[docs/sequence-runsql.mmd]
+```
+
 ## Advanced usage
 
 ```yaml
