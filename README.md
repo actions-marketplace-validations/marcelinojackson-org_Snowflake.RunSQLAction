@@ -40,25 +40,7 @@ You can omit the `sql` input only if you provide `RUN_SQL_STATEMENT`. `sql`/`RUN
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant WF as GitHub Workflow
-    participant ACT as RunSQL Action
-    participant LIB as snowflake-common
-    participant SF as Snowflake
-
-    WF->>ACT: sql, return-rows, SNOWFLAKE_* envs
-    ACT->>ACT: selectSqlText(), clampRows(), enforceSqlLimit()
-    ACT->>LIB: runSql(limitPlan.sql, config)
-    LIB->>SF: connect + execute query
-    SF-->>LIB: rows + metadata
-    LIB-->>ACT: { rows, queryId, sessionId }
-    ACT->>ACT: trim rows, build summary
-    ACT->>ACT: persistResults() if enabled
-    ACT-->>WF: log summary, print CSV or file path
-    ACT-->>WF: set outputs (result-file, metadata)
-```
+![RunSQL sequence](https://mermaid.ink/img/c2VxdWVuY2VEaWFncmFtCiAgICBhdXRvbnVtYmVyCiAgICBwYXJ0aWNpcGFudCBXRiBhcyBHaXRIdWIgV29ya2Zsb3cKICAgIHBhcnRpY2lwYW50IEFDVCBhcyBSdW5TUUwgQWN0aW9uCiAgICBwYXJ0aWNpcGFudCBMSUIgYXMgc25vd2ZsYWtlLWNvbW1vbgogICAgcGFydGljaXBhbnQgU0YgYXMgU25vd2ZsYWtlCgogICAgV0YtPj5BQ1Q6IHNxbCwgcmV0dXJuLXJvd3MsIFNOT1dGTEFLRV8qIGVudnMKICAgIEFDVC0-PkFDVDogc2VsZWN0U3FsVGV4dCgpLCBjbGFtcFJvd3MoKSwgZW5mb3JjZVNxbExpbWl0KCkKICAgIEFDVC0-PkxJQjogcnVuU3FsKGxpbWl0UGxhbi5zcWwsIGNvbmZpZykKICAgIExJQi0-PlNGOiBjb25uZWN0ICsgZXhlY3V0ZSBxdWVyeQogICAgU0YtLT4-TElCOiByb3dzICsgbWV0YWRhdGEKICAgIExJQi0tPj5BQ1Q6IHsgcm93cywgcXVlcnlJZCwgc2Vzc2lvbklkIH0KICAgIEFDVC0-PkFDVDogdHJpbSByb3dzLCBidWlsZCBzdW1tYXJ5CiAgICBBQ1QtPj5BQ1Q6IHBlcnNpc3RSZXN1bHRzKCkgaWYgZW5hYmxlZAogICAgQUNULS0-PldGOiBsb2cgc3VtbWFyeSwgcHJpbnQgQ1NWIG9yIGZpbGUgcGF0aAogICAgQUNULS0-PldGOiBzZXQgb3V0cHV0cyAocmVzdWx0LWZpbGUsIG1ldGFkYXRhKQo)
 
 ## Advanced usage
 
