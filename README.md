@@ -41,7 +41,23 @@ You can omit the `sql` input only if you provide `RUN_SQL_STATEMENT`. `sql`/`RUN
 ## Sequence
 
 ```mermaid
-%%[docs/sequence-runsql.mmd]
+sequenceDiagram
+    autonumber
+    participant WF as GitHub Workflow
+    participant ACT as RunSQL Action
+    participant LIB as snowflake-common
+    participant SF as Snowflake
+
+    WF->>ACT: sql, return-rows, SNOWFLAKE_* envs
+    ACT->>ACT: selectSqlText(), clampRows(), enforceSqlLimit()
+    ACT->>LIB: runSql(limitPlan.sql, config)
+    LIB->>SF: connect + execute query
+    SF-->>LIB: rows + metadata
+    LIB-->>ACT: { rows, queryId, sessionId }
+    ACT->>ACT: trim rows, build summary
+    ACT->>ACT: persistResults() if enabled
+    ACT-->>WF: log summary, print CSV or file path
+    ACT-->>WF: set outputs (result-file, metadata)
 ```
 
 ## Advanced usage
