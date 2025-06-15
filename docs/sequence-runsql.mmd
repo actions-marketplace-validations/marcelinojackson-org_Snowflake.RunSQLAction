@@ -1,0 +1,19 @@
+```mermaid
+sequenceDiagram
+    autonumber
+    participant WF as GitHub Workflow
+    participant ACT as RunSQL Action
+    participant LIB as @marcelinojackson-org/snowflake-common
+    participant SF as Snowflake
+
+    WF->>ACT: provide sql, return-rows, SNOWFLAKE_* envs
+    ACT->>ACT: selectSqlText(), clampRows(), enforceSqlLimit()
+    ACT->>LIB: runSql(limitPlan.sql, config)
+    LIB->>SF: connect + execute query
+    SF-->>LIB: rows, metadata
+    LIB-->>ACT: { rows, queryId, sessionId, ... }
+    ACT->>ACT: build summary, trim rows
+    ACT->>ACT: [persist-results?] -> persistResults()
+    ACT-->>WF: logs summary, CSV or file paths
+    ACT-->>WF: set outputs (result-file, metadata)
+```
